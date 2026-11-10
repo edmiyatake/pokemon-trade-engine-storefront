@@ -13,18 +13,18 @@ This contract covers the shape of the card data the web client renders, and the 
 ## 3. Card View Model
 The shape components receive. This is OUR shape, not TCGdex's. Formatting (e.g. cents to "$12.34") happens only in the UI.
 
-| Field | Type | Required | Example | Source (TCGdex field) | Notes |
+| Field | Type | Required | Example | Source (TCGdex) | Notes |
 |---|---|---|---|---|---|
-| id | string | yes | `swsh3-136` | `id` | Card identity, see card identity ADR |
-| name | string | yes | `Charizard` | `name` | Searchable |
-| number | string | yes | `136` | TODO | String, not number: some numbers contain letters. Sort tiebreaker |
-| setId | string | yes | `swsh3` | TODO | Used for the set filter (ids, not names) |
-| setName | string | yes | `Darkness Ablaze` | TODO | Display and searchable |
-| releaseDate | string (ISO date) | yes | `2020-08-14` | TODO (from the set, not the card) | Used for sort and date filter |
-| rarity | string | | `Rare Holo` | TODO | Used for rarity filter |
-| TODO: `category` or `types` | TODO | | | TODO | Pick one meaning of "card type" (see Open Questions) |
-| imageUrl | string | | | TODO | Built per Section 5 Image rules |
-| marketPriceCents | integer | | `1234` | TODO | Null when no USD price. See Section 5 Price |
+| id | string | yes | `swsh3-136` | card `id` | Mock uses the TCGdex id. Engine id scheme is decided in the card identity ADR |
+| name | string | yes | `Furret` | card `name` | Searchable |
+| number | string | yes | `136` | card `localId` | `localId` can be a string or a number. Always converted to string. Sort tiebreaker |
+| setId | string | yes | `swsh3` | card `set.id` | Used for the set filter (ids, not names) |
+| setName | string | yes | `Darkness Ablaze` | card `set.name` | Display and searchable |
+| releaseDate | string (ISO date) | yes | `2020-08-14` | set endpoint `releaseDate` | Not on the card response (SetBrief has no date). Taken from the set response fetched during seeding |
+| rarity | string | | `Uncommon` | card `rarity` | Optional in TCGdex. Used for rarity filter |
+| category | string | yes | `Pokemon` | card `category` | One of `Pokemon`, `Trainer`, `Energy`. Used for card type filter |
+| imageUrl | string | | `https://assets.tcgdex.net/en/swsh/swsh3/136/high.webp` | card `image` | Built per Section 5 Image rules. Null when `image` is missing |
+| marketPriceCents | integer | | `9` | card `pricing.tcgplayer.<variant>.marketPrice` | Built per Section 5 Price rules. Null when no USD price |
 | listingCount | integer | yes | `0` | n/a | Always 0 until the engine exists |
 
 ## 4. Data Access Contract: `getCards`
@@ -38,7 +38,7 @@ The data function does not decide HTTP status or UI. It returns data; the page d
 | pageSize | integer | 12 | 3 rows of 4 |
 | setId | string | none | Exact match |
 | rarity | string | none | Exact match |
-| TODO: card type param | string | none | Name depends on the Section 3 decision |
+| category | string | none | Exact match: `Pokemon`, `Trainer`, or `Energy` |
 | releasedFrom | string (ISO date) | none | Inclusive |
 | releasedTo | string (ISO date) | none | Inclusive |
 
@@ -62,7 +62,7 @@ The data function does not decide HTTP status or UI. It returns data; the page d
 |---|---|
 | `getCards({ q, page, pageSize, ...filters })` | `cards(filter: CardFilter, page: PageInput): CardPage` |
 | `q` (also the URL param) | `CardFilter.query` |
-| `setId`, `rarity`, card type | `CardFilter.setId`, `CardFilter.rarity`, TODO |
+| `setId`, `rarity`, `category` | `CardFilter.setId`, `CardFilter.rarity`, `CardFilter.category` |
 | `releasedFrom`, `releasedTo` | `CardFilter.releasedFrom`, `CardFilter.releasedTo` |
 | `page`, `pageSize` | `PageInput.number`, `PageInput.size` |
 | Output | `CardPage { items, totalCount, page, pageSize }` |
@@ -73,52 +73,66 @@ Pagination style: offset (page number + size) for now. Cursor pagination is the 
 
 ### Price
 - Source: TCGplayer (USD) only
-- Variant rule: TODO (e.g. first variant with a marketPrice, in order: TODO)
+- Variant rule: use the first variant that has a `marketPrice`, in this order: `normal`, `holofoil`, `reverse-holofoil`
+  - TODO: confirm the actual key names against one real response per seeded set. The TCGdex docs list `reverse-holofoil`, but their example response uses `reverse`
+  - First edition keys are ignored (modern sets have no first editions)
 - Conversion: dollars to integer cents, rounded to the nearest cent (never truncated, since 0.29 * 100 = 28.999... in JavaScript)
 - Missing price: null, shown as "No price data". No EUR fallback
 - UI label: "Market price", kept separate from future engine prices (listing price, last trade price)
 
 ### Image
-- URL format: TODO (base `image` field + quality + extension; verify in TCGdex docs)
-- Missing image: TODO (placeholder image or card-back graphic)
+- URL format: `image` + `/high.webp` (quality `high`, extension `webp`)
+- Missing image: `imageUrl` is null. The UI shows an "image not found" icon
 
 ### Other fields
-- `releaseDate` and `setName` come from the set, not the card detail
-- TODO: any other renames or defaults found while writing the script
+- `number`: `localId` converted to string
+- `releaseDate`: from the set endpoint response, joined to each card by `set.id`
+- `setName`: from the card's `set.name`
 
 ## 6. Seed Data
 
 | Item | Value |
 |---|---|
 | Source | TCGdex REST API, locale `en` |
-| Sets used | TODO: 4 sets (ids and names) |
-| Why these sets | TODO (different release dates so sort and date filters are testable; modern English for price coverage) |
+| Sets used | Surging Sparks, Prismatic Evolutions, Perfect Order, 30th Celebration. TODO: record exact set ids from the TCGdex sets endpoint (special sets may use ids with decimals) |
+| Why these sets | Modern English sets for good price coverage. Release dates span late 2024 to late 2026, so sort and date filters are testable. 30th Celebration (released Sep 2026) is recent and may have sparse pricing, which exercises the "No price data" state |
 | Card count | 40 (10 per set) |
 | Raw file | `data/raw/tcgdex-cards.json` |
-| Fetched at | Stored in file metadata (`fetchedAt`, `source`, `setIds`) |
+| File metadata | `source`, `setIds`, and per-card `fetchedAt` |
 | Script | `scripts/seed-cards.ts` |
+
+### Fetch flow
+1. For each set: fetch the set endpoint, record `releaseDate`, take the first 10 card ids
+2. For each card id: fetch the card detail
+3. Merge results into the raw file (see Failure handling)
 
 ### How to re-run
 1. TODO: prerequisites (Node version, install step)
-2. TODO: command
-3. Expected output: a summary like "38 of 40 saved, 2 skipped: <ids>"
+2. TODO: command (npm script name)
+3. Expected output: a summary like "38 of 40 saved, skipped: <ids>"
+4. Verify: open the raw file and check that `fetchedAt` values changed for saved cards
 
 ### Failure handling
 - Failed card fetch: skip the card, log its id and the reason, continue
-- Partial run: TODO (overwrite the file anyway, or only write if enough cards succeeded)
+- Partial run: merge by card id. Successful cards replace their existing entries; failed cards keep their previous entry (if any). Each card carries its own `fetchedAt`, so mixed fetch times are visible
+- Atomic write: write to a temp file, then rename it over the real file, so a crash mid-write never leaves a corrupt file
 - Request pacing: sequential or a few at a time (about 5), no bursts
 
 ## 7. Validation
 - Raw response validation: Zod schema applied when reading the raw file
 - Invalid card: skip it and log its id. One bad card never blanks the grid
+- Known TCGdex doc inconsistencies to validate against real data, not docs:
+  - TCGplayer variant key names (`reverse` vs `reverse-holofoil`)
+  - `pricing.tcgplayer.updated` documented as a Number, shown as an ISO string in the example
 
 ## 8. Open Questions
-- "Card type" filter: `category` (Pokemon / Trainer / Energy) or `types` (Fire, Water, ...)?
-- Which 4 sets to seed?
-- Price variant rule order?
+- Exact TCGdex set ids for the four seeded sets
+- Actual TCGplayer variant key names in real responses
+- Engine card id scheme (internal UUID with TCGdex id as external reference, or TCGdex id as primary key). Decided in the card identity ADR
 
 ## 9. Changelog
 | Date | Change | Author |
 |---|---|---|
 | 2026-11-09 | Initial draft | Edwin Miyatake |
 | 2026-11-10 | Added filter fields, sort tiebreaker, output semantics, GraphQL mapping draft, USD-only price rule, validation rules | Edwin Miyatake |
+| 2026-11-10 | Chose `category` for card type, picked four seed sets, defined variant order and image URL format, filled Source column, added merge-by-id partial runs with atomic write | Edwin Miyatake |
