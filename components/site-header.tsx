@@ -10,7 +10,7 @@ export function SiteHeader() {
       <div className="mx-auto grid h-14 max-w-screen-2xl grid-cols-[1fr_minmax(0,42rem)_1fr] items-center gap-4 px-4 md:px-6">
         <div className="justify-self-start">
             <Logo>
-                <span className="hidden font-semibold tracking-tight sm:inline">Name</span>
+                <span className="hidden font-semibold tracking-tight sm:inline">PTE</span>
             </Logo>
         </div>
 
