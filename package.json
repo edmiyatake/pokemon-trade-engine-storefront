@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:cards": "tsx scripts/seed-cards.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
