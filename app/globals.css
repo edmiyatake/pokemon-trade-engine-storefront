@@ -7,9 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -115,6 +114,93 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Logo */
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.375rem;
+  outline: none;
+}
+
+.logo-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.pokeball {
+  --pb-white: #fff;
+  --pb-red: #e53935;
+  --pb-black: #212121;
+
+  font-size: 32px;
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  background: linear-gradient(
+    to bottom,
+    var(--pb-red),
+    var(--pb-red) 48%,
+    var(--pb-black) 48%,
+    var(--pb-black) 55%,
+    var(--pb-white) 55%
+  );
+  border-radius: 50%;
+  border: 0.0667em solid var(--pb-black);
+  box-shadow:
+    0 0 0.033em rgba(0, 0, 0, 0.2),
+    inset 0.0267em 0.0167em 0 rgba(0, 0, 0, 0.2);
+}
+
+.pokeball::before {
+  content: "";
+  position: absolute;
+  top: 0.1333em;
+  right: 0.1333em;
+  width: 0.1em;
+  height: 0.1em;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+}
+
+.pokeball::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.3667em;
+  height: 0.3667em;
+  background-color: var(--pb-white);
+  border: 0.05em solid var(--pb-black);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: -0.0167em -0.01em 0 rgba(0, 0, 0, 0.2);
+}
+
+.logo-link:hover .pokeball,
+.logo-link:focus-visible .pokeball,
+.logo-link:active .pokeball {
+  animation: pokeball-shake 900ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-link:hover .pokeball,
+  .logo-link:focus-visible .pokeball,
+  .logo-link:active .pokeball {
+    animation: none;
+  }
+}
+
+@keyframes pokeball-shake {
+  0%   { transform: translateX(0) rotate(0); }
+  15%  { transform: translateX(-0.0333em) rotate(-10deg); }
+  40%  { transform: translateX(-0.05em) rotate(-15deg); }
+  60%  { transform: translateX(0.05em) rotate(15deg); }
+  100% { transform: translateX(0) rotate(0); }
 }
 
 @layer base {
