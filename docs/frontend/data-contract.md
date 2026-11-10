@@ -94,12 +94,19 @@ Pagination style: offset (page number + size) for now. Cursor pagination is the 
 | Item | Value |
 |---|---|
 | Source | TCGdex REST API, locale `en` |
-| Sets used | Surging Sparks, Prismatic Evolutions, Perfect Order, 30th Celebration. TODO: record exact set ids from the TCGdex sets endpoint (special sets may use ids with decimals) |
+| Sets used | `sv08` (Surging Sparks), `sv08.5` (Prismatic Evolutions), `me03` (Perfect Order), `30th` (30th Celebration) |
 | Why these sets | Modern English sets for good price coverage. Release dates span late 2024 to late 2026, so sort and date filters are testable. 30th Celebration (released Sep 2026) is recent and may have sparse pricing, which exercises the "No price data" state |
 | Card count | 40 (10 per set) |
 | Raw file | `data/raw/tcgdex-cards.json` |
 | File metadata | `source`, `setIds`, and per-card `fetchedAt` |
 | Script | `scripts/seed-cards.ts` |
+
+### Set id notes
+- Ids come from the TCGdex sets list endpoint (`/v2/en/sets`), not from guessing
+- `sv08.5` contains a dot. Safe in URL paths; never split ids on dots or use them with dot-path tools
+- `30th` starts with a digit and had no logo or symbol in the sets list at selection time. Expect gaps in its card data and pricing
+- `30th-c` (30th Classic Collection) is a different set. Do not confuse it with `30th`
+- The sets list also includes TCG Pocket sets (ids like `A1`, `B2`). Those are digital-only cards and must never be seeded
 
 ### Fetch flow
 1. For each set: fetch the set endpoint, record `releaseDate`, take the first 10 card ids
@@ -126,7 +133,6 @@ Pagination style: offset (page number + size) for now. Cursor pagination is the 
   - `pricing.tcgplayer.updated` documented as a Number, shown as an ISO string in the example
 
 ## 8. Open Questions
-- Exact TCGdex set ids for the four seeded sets
 - Actual TCGplayer variant key names in real responses
 - Engine card id scheme (internal UUID with TCGdex id as external reference, or TCGdex id as primary key). Decided in the card identity ADR
 
@@ -136,3 +142,4 @@ Pagination style: offset (page number + size) for now. Cursor pagination is the 
 | 2026-11-09 | Initial draft | Edwin Miyatake |
 | 2026-11-10 | Added filter fields, sort tiebreaker, output semantics, GraphQL mapping draft, USD-only price rule, validation rules | Edwin Miyatake |
 | 2026-11-10 | Chose `category` for card type, picked four seed sets, defined variant order and image URL format, filled Source column, added merge-by-id partial runs with atomic write | Edwin Miyatake |
+| 2026-11-10 | Recorded seed set ids (`sv08`, `sv08.5`, `me03`, `30th`) and set id notes | Edwin Miyatake |
